@@ -1,3 +1,25 @@
+# Timberland-sig libnvme
+Timberland-sig uses a private copy of libnvme
+
+When working in the Timberland-sig libnvme repository use:
+
+```
+ $ git clone https://github.com/timberland-sig/libnvme.git
+```
+
+## Timberland-sig libnvme work flow
+
+All changes aren pull requests are targeted to the `timberlandmaster_v1.0` branch
+
+To submit a change for review to the timberland-sig libnvme repository:
+
+1. cd to `libnvme` directory and create a private branch
+2. edit and compile your changes as normal and git commit your changes
+3. git push your private branch to the remote timberland-sig/libnvme repository
+4. open a pull request at timberland-sig/libnvme targeting the timberlandmaster_v1.0 branch 
+
+Otherwise, all instructions below apply.
+
 # libnvme
 
 ![MesonBuild](https://github.com/linux-nvme/libnvme/actions/workflows/meson.yml/badge.svg)
