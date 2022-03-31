@@ -7,6 +7,7 @@
 #
 sources = [
     'nvme/cleanup.c',
+    'nvme/nbft.c',
     'nvme/fabrics.c',
     'nvme/filters.c',
     'nvme/ioctl.c',
@@ -60,6 +61,7 @@ libnvme_dep = declare_dependency(
 mode = ['rw-r--r--', 0, 0]
 install_headers('libnvme.h', install_mode: mode)
 install_headers([
+        'nvme/nbft.h',
         'nvme/fabrics.h',
         'nvme/filters.h',
         'nvme/ioctl.h',
