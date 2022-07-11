@@ -4,16 +4,26 @@
 #include <uuid/uuid.h>
 #include <ccan/list/list.h>
 
+enum primary_admin_host_flag {
+	not_indicated,
+	unselected,
+	selected,
+	reserved,
+};
+
 struct nbft_host {
 	uuid_t *id;
 	char *nqn;
+	bool host_id_configured;
+	bool host_nqn_configured;
+	enum primary_admin_host_flag primary;
 };
 
 struct nbft_hfi_info_tcp {
 	__u32 pci_sbdf;
 	__u8 *mac_addr;
 	__u16 vlan;
-	__u8 origin;
+	__u8 ip_origin;
 	char ipaddr[40];
 	__u8 subnet_mask_prefix;
 	char gateway_ipaddr[40];
@@ -21,17 +31,15 @@ struct nbft_hfi_info_tcp {
 	char primary_dns_ipaddr[40];
 	char secondary_dns_ipaddr[40];
 	char dhcp_server_ipaddr[40];
-	char *hostname_from_dhcp;
-	bool info_is_from_dhcp;
+	char *host_name;
 	bool this_hfi_is_default_route;
-	bool transport_offload_supported;
 };
 
 struct nbft_hfi {
 	int index;
 	char transport[8];
-	uuid_t *host_id;
-	char *host_nqn;
+	//uuid_t *host_id;
+	//char *host_nqn;
 	struct nbft_hfi_info_tcp tcp_info;
 	struct list_node node;
 };
@@ -67,18 +75,23 @@ struct nbft_subsystem_ns {
 	struct nbft_hfi **hfis;
 	char transport[8];
 	char transport_address[40];
-	char transport_svcid[6];
+	char *transport_svcid;
 	__u16 subsys_port_id;
 	__u32 nsid;
 	enum nid_type_type nid_type;
 	__u8 *nid;
 	char *subsys_nqn;
 	/*
+	 * tcp specific
+	 */
+	bool pdu_header_digest_required;
+	bool data_digest_required;
+	/*
 	 * from extended information sub-structure, if present:
 	 */
 	int controller_id;
-	int mp_group;
 	int asqsz;
+	char *dhcp_root_path_string;
 };
 
 struct nbft_info {
