@@ -178,8 +178,8 @@ struct __attribute__((__packed__)) raw_nbft_ssns {
 	__u16 transport_specific_flags;
 	__u8 primary_discovery_ctrl_index;
 	__u8 reserved1;
-	heap_obj subsystem_transport_address;
-	heap_obj subsystem_transport_svcid;
+	heap_obj subsystem_traddr;
+	heap_obj subsystem_trsvcid;
 	__u16 subsystem_port_id;
 	__u32 nsid;
 	__u8 nid_type;
@@ -480,16 +480,16 @@ static int read_ssns(struct nbft_info *nbft, struct raw_nbft_ssns *raw_ssns, str
 	}
 
 	/* subsystem transport address */
-	ret = get_heap_obj(raw_ssns, subsystem_transport_address, 0, (char **)&tmp);
+	ret = get_heap_obj(raw_ssns, subsystem_traddr, 0, (char **)&tmp);
 	if (ret)
 		goto fail;
 
-	format_ip_addr(ssns->transport_address, sizeof(ssns->transport_address), tmp);
+	format_ip_addr(ssns->traddr, sizeof(ssns->traddr), tmp);
 
 	/*
 	 * subsystem transport service identifier
 	 */
-	ret = get_heap_obj(raw_ssns, subsystem_transport_svcid, 1, &ssns->transport_svcid);
+	ret = get_heap_obj(raw_ssns, subsystem_trsvcid, 1, &ssns->trsvcid);
 	if (ret)
 		goto fail;
 
