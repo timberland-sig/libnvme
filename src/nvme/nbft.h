@@ -83,8 +83,8 @@ struct nbft_subsystem_ns {
 	int num_hfis;
 	struct nbft_hfi **hfis;
 	char transport[8];
-	char transport_address[40];
-	char *transport_svcid;
+	char traddr[40];
+	char *trsvcid;
 	__u16 subsys_port_id;
 	__u32 nsid;
 	enum nid_type_type nid_type;
