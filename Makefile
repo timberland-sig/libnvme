@@ -8,6 +8,7 @@
 NAME          := libnvme
 .DEFAULT_GOAL := ${NAME}
 BUILD-DIR     := .build
+VERSION       := 1.3
 
 ${BUILD-DIR}:
 	meson $@
@@ -28,6 +29,7 @@ endif
 purge:
 ifneq ("$(wildcard ${BUILD-DIR})","")
 	rm -rf ${BUILD-DIR}
+	rm -f libnvme-${VERSION}.tar*
 endif
 
 .PHONY: install dist
@@ -44,7 +46,7 @@ test: ${BUILD-DIR}
 
 .PHONY: rpm
 rpm: ${BUILD-DIR}
-	git archive --format=tar HEAD > libnvme.tar
-	tar rf libnvme.tar ${BUILD-DIR}/libnvme.spec
-	gzip -f -9 libnvme.tar
-	rpmbuild -ta libnvme.tar.gz -v
+	git archive --format=tar HEAD > libnvme-${VERSION}.tar
+	tar rf libnvme-${VERSION}.tar ${BUILD-DIR}/libnvme.spec
+	gzip -f -9 libnvme-${VERSION}.tar
+	rpmbuild -ta libnvme-${VERSION}.tar.gz -v
