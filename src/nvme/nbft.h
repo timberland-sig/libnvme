@@ -1012,7 +1012,7 @@ struct nbft_info_host {
 
 struct nbft_info_hfi_info_tcp {
 	__u32 pci_sbdf;
-	__u8 *mac_addr;
+	__u8 mac_addr[6];
 	__u16 vlan;
 	__u8 ip_origin;
 	char ipaddr[40];
