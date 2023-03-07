@@ -9,7 +9,8 @@
 #ifndef _NBFT_H
 #define _NBFT_H
 
-#include <uuid/uuid.h>
+#include <sys/types.h>
+
 #include <ccan/list/list.h>
 
 #include "util.h"
@@ -1002,7 +1003,7 @@ enum nbft_info_primary_admin_host_flag {
 };
 
 struct nbft_info_host {
-	uuid_t *id;
+	unsigned char *id;
 	char *nqn;
 	bool host_id_configured;
 	bool host_nqn_configured;
