@@ -299,7 +299,7 @@ static int read_hfi_info_tcp(struct nbft_info *nbft, struct nbft_hfi_info_tcp *r
 			 nbft->filename, hfi->index);
 
 	hfi->tcp_info.pci_sbdf = raw_hfi_info_tcp->pci_sbdf;
-	hfi->tcp_info.mac_addr = raw_hfi_info_tcp->mac_addr;
+	memcpy(hfi->tcp_info.mac_addr, raw_hfi_info_tcp->mac_addr, sizeof(raw_hfi_info_tcp->mac_addr));
 	hfi->tcp_info.vlan = raw_hfi_info_tcp->vlan;
 	hfi->tcp_info.ip_origin = raw_hfi_info_tcp->ip_origin;
 	format_ip_addr(hfi->tcp_info.ipaddr, sizeof(hfi->tcp_info.ipaddr), raw_hfi_info_tcp->ip_address);
