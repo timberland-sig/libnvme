@@ -11,8 +11,6 @@
 
 #include <sys/types.h>
 
-#include <ccan/list/list.h>
-
 #include "util.h"
 
 
@@ -1012,7 +1010,7 @@ struct nbft_info_host {
 
 struct nbft_info_hfi_info_tcp {
 	__u32 pci_sbdf;
-	__u8 *mac_addr;
+	__u8 mac_addr[6];
 	__u16 vlan;
 	__u8 ip_origin;
 	char ipaddr[40];
@@ -1033,12 +1031,10 @@ struct nbft_info_hfi {
 	//uuid_t *host_id;
 	//char *host_nqn;
 	struct nbft_info_hfi_info_tcp tcp_info;
-	struct list_node node;
 };
 
 struct nbft_info_discovery {
 	int index;
-	struct list_node node;
 	struct nbft_info_security *security;
 	struct nbft_info_hfi *hfi;
 	char *uri;
@@ -1047,7 +1043,6 @@ struct nbft_info_discovery {
 
 struct nbft_info_security {
 	int index;
-	struct list_node node;
 	/* TODO add fields */
 };
 
@@ -1060,10 +1055,10 @@ enum nbft_info_nid_type {
 
 struct nbft_info_subsystem_ns {
 	int index;
-	struct list_node node;
 	struct nbft_info_discovery *discovery;
 	struct nbft_info_security *security;
 	int num_hfis;
+	/* @hfis: null terminated */
 	struct nbft_info_hfi **hfis;
 	char transport[8];
 	char traddr[40];
@@ -1087,20 +1082,19 @@ struct nbft_info_subsystem_ns {
 };
 
 struct nbft_info {
-	struct list_node node;
 	const char *filename;
 	__u8 *raw_nbft;
 	ssize_t raw_nbft_size;
 	/* host info... should match other NBFTs */
 	struct nbft_info_host host;
-	/* adapters */
-	struct list_head hfi_list;
-	/* security profiles */
-	struct list_head security_list;
-	/* discovery controllers */
-	struct list_head discovery_list;
-	/* subsystem/namespace */
-	struct list_head subsystem_ns_list;
+	/* @hfi_list: adapters, null-terminated */
+	struct nbft_info_hfi **hfi_list;
+	/* @security_list: security profiles, null-terminated */
+	struct nbft_info_security **security_list;
+	/* @discovery_list: discovery controllers, null-terminated */
+	struct nbft_info_discovery **discovery_list;
+	/* @subsystem_ns_list: subsystem/namespace, null-terminated */
+	struct nbft_info_subsystem_ns **subsystem_ns_list;
 };
 
 /*

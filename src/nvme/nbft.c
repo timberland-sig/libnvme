@@ -102,7 +102,7 @@ static int __get_heap_obj(struct nbft_header *header, const char *filename,
 
 	if (is_string) {
 		if (strnlen(*output, obj.length + 1) < obj.length)
-			nvme_msg(NULL, LOG_DEBUG, "file %s: string '%s' in descriptor '%s' is shorter (%ld) than specified length (%d)\n",
+			nvme_msg(NULL, LOG_DEBUG, "file %s: string '%s' in descriptor '%s' is shorter (%zd) than specified length (%d)\n",
 				filename, fieldname, descriptorname, strnlen(*output, obj.length + 1), obj.length);
 		else if (strnlen(*output, obj.length + 1) > obj.length) {
 			nvme_msg(NULL, LOG_DEBUG, "file %s: string '%s' in descriptor '%s' is not zero terminated\n",
@@ -122,31 +122,31 @@ static int __get_heap_obj(struct nbft_header *header, const char *filename,
 
 static struct nbft_info_discovery *discovery_from_index(struct nbft_info *nbft, int i)
 {
-	struct nbft_info_discovery *d;
+	struct nbft_info_discovery **d;
 
-	list_for_each(&nbft->discovery_list, d, node)
-		if (d->index == i)
-			return d;
+	for (d = nbft->discovery_list; d && *d; d++)
+		if ((*d)->index == i)
+			return *d;
 	return NULL;
 }
 
 static struct nbft_info_hfi *hfi_from_index(struct nbft_info *nbft, int i)
 {
-	struct nbft_info_hfi *h;
+	struct nbft_info_hfi **h;
 
-	list_for_each(&nbft->hfi_list, h, node)
-		if (h->index == i)
-			return h;
+	for (h = nbft->hfi_list; h && *h; h++)
+		if ((*h)->index == i)
+			return *h;
 	return NULL;
 }
 
 static struct nbft_info_security *security_from_index(struct nbft_info *nbft, int i)
 {
-	struct nbft_info_security *s;
+	struct nbft_info_security **s;
 
-	list_for_each(&nbft->security_list, s, node)
-		if (s->index == i)
-			return s;
+	for (s = nbft->security_list; s && *s; s++)
+		if ((*s)->index == i)
+			return *s;
 	return NULL;
 }
 
@@ -242,7 +242,7 @@ static int read_ssns(struct nbft_info *nbft, struct nbft_ssns *raw_ssns, struct 
 	if (ret)
 		goto fail;
 
-	ssns->hfis = calloc(raw_ssns->secondary_hfi_assoc_obj.length + 1, sizeof(*ssns->hfis));
+	ssns->hfis = calloc(raw_ssns->secondary_hfi_assoc_obj.length + 2, sizeof(*ssns->hfis));
 	if (!ssns->hfis) {
 		ret = -ENOMEM;
 		goto fail;
@@ -299,7 +299,7 @@ static int read_hfi_info_tcp(struct nbft_info *nbft, struct nbft_hfi_info_tcp *r
 			 nbft->filename, hfi->index);
 
 	hfi->tcp_info.pci_sbdf = raw_hfi_info_tcp->pci_sbdf;
-	hfi->tcp_info.mac_addr = raw_hfi_info_tcp->mac_addr;
+	memcpy(hfi->tcp_info.mac_addr, raw_hfi_info_tcp->mac_addr, sizeof(raw_hfi_info_tcp->mac_addr));
 	hfi->tcp_info.vlan = raw_hfi_info_tcp->vlan;
 	hfi->tcp_info.ip_origin = raw_hfi_info_tcp->ip_origin;
 	format_ip_addr(hfi->tcp_info.ipaddr, sizeof(hfi->tcp_info.ipaddr), raw_hfi_info_tcp->ip_address);
@@ -419,53 +419,45 @@ static int read_security(struct nbft_info *nbft, struct nbft_security *raw_secur
 
 static void read_hfi_descriptors(struct nbft_info *nbft, int num_hfi, struct nbft_hfi *raw_hfi_array, int hfi_len)
 {
-	int c;
-	struct nbft_hfi *raw_hfi;
-	struct nbft_info_hfi *hfi;
+	int i, cnt;
 
-	for (c = 0; c < num_hfi; c++) {
-		raw_hfi = &raw_hfi_array[c];
-		if (read_hfi(nbft, raw_hfi, &hfi) == 0)
-			list_add_tail(&nbft->hfi_list, &hfi->node);
+	nbft->hfi_list = calloc(num_hfi + 1, sizeof(struct nbft_info_hfi));
+	for (i = 0, cnt = 0; i < num_hfi; i++) {
+		if (read_hfi(nbft, &raw_hfi_array[i], &nbft->hfi_list[cnt]) == 0)
+			cnt++;
 	}
 }
 
 static void read_security_descriptors(struct nbft_info *nbft, int num_sec, struct nbft_security *raw_sec_array, int sec_len)
 {
-	int c;
-	struct nbft_security *raw_security;
-	struct nbft_info_security *security;
+	int i, cnt;
 
-	for (c = 0; c < num_sec; c++) {
-		raw_security = &raw_sec_array[c];
-		if (read_security(nbft, raw_security, &security) == 0)
-			list_add_tail(&nbft->security_list, &security->node);
+	nbft->security_list = calloc(num_sec + 1, sizeof(struct nbft_info_security));
+	for (i = 0, cnt = 0; i < num_sec; i++) {
+		if (read_security(nbft, &raw_sec_array[i], &nbft->security_list[cnt]) == 0)
+			cnt++;
 	}
 }
 
 static void read_discovery_descriptors(struct nbft_info *nbft, int num_disc, struct nbft_discovery *raw_disc_array, int disc_len)
 {
-	int c;
-	struct nbft_discovery *raw_discovery;
-	struct nbft_info_discovery *discovery;
+	int i, cnt;
 
-	for (c = 0; c < num_disc; c++) {
-		raw_discovery = &raw_disc_array[c];
-		if (read_discovery(nbft, raw_discovery, &discovery) == 0)
-			list_add_tail(&nbft->discovery_list, &discovery->node);
+	nbft->discovery_list = calloc(num_disc + 1, sizeof(struct nbft_info_discovery));
+	for (i = 0, cnt = 0; i < num_disc; i++) {
+		if (read_discovery(nbft, &raw_disc_array[i], &nbft->discovery_list[cnt]) == 0)
+			cnt++;
 	}
 }
 
 static void read_ssns_descriptors(struct nbft_info *nbft, int num_ssns, struct nbft_ssns *raw_ssns_array, int ssns_len)
 {
-	int c;
-	struct nbft_ssns *raw_ssns;
-	struct nbft_info_subsystem_ns *ss;
+	int i, cnt;
 
-	for (c = 0; c < num_ssns; c++) {
-		raw_ssns = &raw_ssns_array[c];
-		if (read_ssns(nbft, raw_ssns, &ss) == 0)
-			list_add_tail(&nbft->subsystem_ns_list, &ss->node);
+	nbft->subsystem_ns_list = calloc(num_ssns + 1, sizeof(struct nbft_info_subsystem_ns));
+	for (i = 0, cnt = 0; i < num_ssns; i++) {
+		if (read_ssns(nbft, &raw_ssns_array[i], &nbft->subsystem_ns_list[cnt]) == 0)
+			cnt++;
 	}
 }
 
@@ -576,19 +568,25 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 
 void nbft_free(struct nbft_info *nbft)
 {
-	void *subtable;
-	struct nbft_info_subsystem_ns *ns;
+	struct nbft_info_hfi **hfi;
+	struct nbft_info_security **sec;
+	struct nbft_info_discovery **disc;
+	struct nbft_info_subsystem_ns **ns;
 
-	while ((subtable = list_pop(&nbft->hfi_list, struct nbft_info_hfi, node)))
-		free(subtable);
-	while ((subtable = list_pop(&nbft->discovery_list, struct nbft_info_discovery, node)))
-		free(subtable);
-	while ((subtable = list_pop(&nbft->security_list, struct nbft_info_security, node)))
-		free(subtable);
-	while ((ns = list_pop(&nbft->subsystem_ns_list, struct nbft_info_subsystem_ns, node))) {
-		free(ns->hfis);
-		free(ns);
+	for (hfi = nbft->hfi_list; hfi && *hfi; hfi++)
+		free(*hfi);
+	free(nbft->hfi_list);
+	for (disc = nbft->discovery_list; disc && *disc; disc++)
+		free(*disc);
+	free(nbft->discovery_list);
+	for (sec = nbft->security_list; sec && *sec; sec++)
+		free(*sec);
+	free(nbft->security_list);
+	for (ns = nbft->subsystem_ns_list; ns && *ns; ns++) {
+		free((*ns)->hfis);
+		free(*ns);
 	}
+	free(nbft->subsystem_ns_list);
 	free(nbft->raw_nbft);
 	free((void *)nbft->filename);
 	free(nbft);
@@ -655,10 +653,6 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	(*nbft)->filename = strdup(filename);
 	(*nbft)->raw_nbft = raw_nbft;
 	(*nbft)->raw_nbft_size = raw_nbft_size;
-	list_head_init(&(*nbft)->hfi_list);
-	list_head_init(&(*nbft)->security_list);
-	list_head_init(&(*nbft)->discovery_list);
-	list_head_init(&(*nbft)->subsystem_ns_list);
 
 	if (parse_raw_nbft(*nbft)) {
 		nvme_msg(NULL, LOG_ERR, "Failed to parse %s\n", filename);
