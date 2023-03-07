@@ -519,7 +519,7 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 
 	verify (host->flags & NBFT_HOST_VALID, "host descriptor valid flag not set");
 	verify(host->structure_id == NBFT_DESC_HOST, "invalid ID in HOST descriptor");
-	nbft->host.id = &(host->host_id);
+	nbft->host.id = (unsigned char *) &(host->host_id);
 	if (get_heap_obj(host, host_nqn_obj, 1, &nbft->host.nqn) != 0)
 		return -EINVAL;
 
