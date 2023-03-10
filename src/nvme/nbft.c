@@ -102,7 +102,7 @@ static int __get_heap_obj(struct nbft_header *header, const char *filename,
 
 	if (is_string) {
 		if (strnlen(*output, obj.length + 1) < obj.length)
-			nvme_msg(NULL, LOG_DEBUG, "file %s: string '%s' in descriptor '%s' is shorter (%ld) than specified length (%d)\n",
+			nvme_msg(NULL, LOG_DEBUG, "file %s: string '%s' in descriptor '%s' is shorter (%zd) than specified length (%d)\n",
 				filename, fieldname, descriptorname, strnlen(*output, obj.length + 1), obj.length);
 		else if (strnlen(*output, obj.length + 1) > obj.length) {
 			nvme_msg(NULL, LOG_DEBUG, "file %s: string '%s' in descriptor '%s' is not zero terminated\n",
