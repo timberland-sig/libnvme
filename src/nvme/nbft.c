@@ -132,11 +132,11 @@ static struct nbft_info_discovery *discovery_from_index(struct nbft_info *nbft, 
 
 static struct nbft_info_hfi *hfi_from_index(struct nbft_info *nbft, int i)
 {
-	struct nbft_info_hfi *h;
+	struct nbft_info_hfi **h;
 
-	list_for_each(&nbft->hfi_list, h, node)
-		if (h->index == i)
-			return h;
+	for (h = nbft->hfi_list; h && *h; h++)
+		if ((*h)->index == i)
+			return *h;
 	return NULL;
 }
 
@@ -419,14 +419,12 @@ static int read_security(struct nbft_info *nbft, struct nbft_security *raw_secur
 
 static void read_hfi_descriptors(struct nbft_info *nbft, int num_hfi, struct nbft_hfi *raw_hfi_array, int hfi_len)
 {
-	int c;
-	struct nbft_hfi *raw_hfi;
-	struct nbft_info_hfi *hfi;
+	int i, cnt;
 
-	for (c = 0; c < num_hfi; c++) {
-		raw_hfi = &raw_hfi_array[c];
-		if (read_hfi(nbft, raw_hfi, &hfi) == 0)
-			list_add_tail(&nbft->hfi_list, &hfi->node);
+	nbft->hfi_list = calloc(num_hfi + 1, sizeof(struct nbft_info_hfi));
+	for (i = 0, cnt = 0; i < num_hfi; i++) {
+		if (read_hfi(nbft, &raw_hfi_array[i], &nbft->hfi_list[cnt]) == 0)
+			cnt++;
 	}
 }
 
@@ -577,10 +575,12 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 void nbft_free(struct nbft_info *nbft)
 {
 	void *subtable;
+	struct nbft_info_hfi **hfi;
 	struct nbft_info_subsystem_ns *ns;
 
-	while ((subtable = list_pop(&nbft->hfi_list, struct nbft_info_hfi, node)))
-		free(subtable);
+	for (hfi = nbft->hfi_list; hfi && *hfi; hfi++)
+		free(*hfi);
+	free(nbft->hfi_list);
 	while ((subtable = list_pop(&nbft->discovery_list, struct nbft_info_discovery, node)))
 		free(subtable);
 	while ((subtable = list_pop(&nbft->security_list, struct nbft_info_security, node)))
@@ -655,7 +655,6 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	(*nbft)->filename = strdup(filename);
 	(*nbft)->raw_nbft = raw_nbft;
 	(*nbft)->raw_nbft_size = raw_nbft_size;
-	list_head_init(&(*nbft)->hfi_list);
 	list_head_init(&(*nbft)->security_list);
 	list_head_init(&(*nbft)->discovery_list);
 	list_head_init(&(*nbft)->subsystem_ns_list);
