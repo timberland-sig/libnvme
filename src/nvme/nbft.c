@@ -142,11 +142,11 @@ static struct nbft_info_hfi *hfi_from_index(struct nbft_info *nbft, int i)
 
 static struct nbft_info_security *security_from_index(struct nbft_info *nbft, int i)
 {
-	struct nbft_info_security *s;
+	struct nbft_info_security **s;
 
-	list_for_each(&nbft->security_list, s, node)
-		if (s->index == i)
-			return s;
+	for (s = nbft->security_list; s && *s; s++)
+		if ((*s)->index == i)
+			return *s;
 	return NULL;
 }
 
@@ -430,14 +430,12 @@ static void read_hfi_descriptors(struct nbft_info *nbft, int num_hfi, struct nbf
 
 static void read_security_descriptors(struct nbft_info *nbft, int num_sec, struct nbft_security *raw_sec_array, int sec_len)
 {
-	int c;
-	struct nbft_security *raw_security;
-	struct nbft_info_security *security;
+	int i, cnt;
 
-	for (c = 0; c < num_sec; c++) {
-		raw_security = &raw_sec_array[c];
-		if (read_security(nbft, raw_security, &security) == 0)
-			list_add_tail(&nbft->security_list, &security->node);
+	nbft->security_list = calloc(num_sec + 1, sizeof(struct nbft_info_security));
+	for (i = 0, cnt = 0; i < num_sec; i++) {
+		if (read_security(nbft, &raw_sec_array[i], &nbft->security_list[cnt]) == 0)
+			cnt++;
 	}
 }
 
@@ -576,6 +574,7 @@ void nbft_free(struct nbft_info *nbft)
 {
 	void *subtable;
 	struct nbft_info_hfi **hfi;
+	struct nbft_info_security **sec;
 	struct nbft_info_subsystem_ns *ns;
 
 	for (hfi = nbft->hfi_list; hfi && *hfi; hfi++)
@@ -583,8 +582,9 @@ void nbft_free(struct nbft_info *nbft)
 	free(nbft->hfi_list);
 	while ((subtable = list_pop(&nbft->discovery_list, struct nbft_info_discovery, node)))
 		free(subtable);
-	while ((subtable = list_pop(&nbft->security_list, struct nbft_info_security, node)))
-		free(subtable);
+	for (sec = nbft->security_list; sec && *sec; sec++)
+		free(*sec);
+	free(nbft->security_list);
 	while ((ns = list_pop(&nbft->subsystem_ns_list, struct nbft_info_subsystem_ns, node))) {
 		free(ns->hfis);
 		free(ns);
@@ -655,7 +655,6 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	(*nbft)->filename = strdup(filename);
 	(*nbft)->raw_nbft = raw_nbft;
 	(*nbft)->raw_nbft_size = raw_nbft_size;
-	list_head_init(&(*nbft)->security_list);
 	list_head_init(&(*nbft)->discovery_list);
 	list_head_init(&(*nbft)->subsystem_ns_list);
 
