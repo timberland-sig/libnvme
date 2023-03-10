@@ -1033,7 +1033,6 @@ struct nbft_info_hfi {
 	//uuid_t *host_id;
 	//char *host_nqn;
 	struct nbft_info_hfi_info_tcp tcp_info;
-	struct list_node node;
 };
 
 struct nbft_info_discovery {
@@ -1064,6 +1063,7 @@ struct nbft_info_subsystem_ns {
 	struct nbft_info_discovery *discovery;
 	struct nbft_info_security *security;
 	int num_hfis;
+	/* @hfis: non-null terminated */
 	struct nbft_info_hfi **hfis;
 	char transport[8];
 	char traddr[40];
@@ -1087,14 +1087,13 @@ struct nbft_info_subsystem_ns {
 };
 
 struct nbft_info {
-	struct list_node node;
 	const char *filename;
 	__u8 *raw_nbft;
 	ssize_t raw_nbft_size;
 	/* host info... should match other NBFTs */
 	struct nbft_info_host host;
-	/* adapters */
-	struct list_head hfi_list;
+	/* @hfi_list: adapters, null-terminated */
+	struct nbft_info_hfi **hfi_list;
 	/* security profiles */
 	struct list_head security_list;
 	/* discovery controllers */
