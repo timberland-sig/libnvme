@@ -1037,7 +1037,6 @@ struct nbft_info_hfi {
 
 struct nbft_info_discovery {
 	int index;
-	struct list_node node;
 	struct nbft_info_security *security;
 	struct nbft_info_hfi *hfi;
 	char *uri;
@@ -1095,8 +1094,8 @@ struct nbft_info {
 	struct nbft_info_hfi **hfi_list;
 	/* @security_list: security profiles, null-terminated */
 	struct nbft_info_security **security_list;
-	/* discovery controllers */
-	struct list_head discovery_list;
+	/* @discovery_list: discovery controllers, null-terminated */
+	struct nbft_info_discovery **discovery_list;
 	/* subsystem/namespace */
 	struct list_head subsystem_ns_list;
 };
