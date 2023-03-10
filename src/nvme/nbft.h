@@ -1046,7 +1046,6 @@ struct nbft_info_discovery {
 
 struct nbft_info_security {
 	int index;
-	struct list_node node;
 	/* TODO add fields */
 };
 
@@ -1094,8 +1093,8 @@ struct nbft_info {
 	struct nbft_info_host host;
 	/* @hfi_list: adapters, null-terminated */
 	struct nbft_info_hfi **hfi_list;
-	/* security profiles */
-	struct list_head security_list;
+	/* @security_list: security profiles, null-terminated */
+	struct nbft_info_security **security_list;
 	/* discovery controllers */
 	struct list_head discovery_list;
 	/* subsystem/namespace */
