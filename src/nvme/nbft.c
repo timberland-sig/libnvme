@@ -452,14 +452,12 @@ static void read_discovery_descriptors(struct nbft_info *nbft, int num_disc, str
 
 static void read_ssns_descriptors(struct nbft_info *nbft, int num_ssns, struct nbft_ssns *raw_ssns_array, int ssns_len)
 {
-	int c;
-	struct nbft_ssns *raw_ssns;
-	struct nbft_info_subsystem_ns *ss;
+	int i, cnt;
 
-	for (c = 0; c < num_ssns; c++) {
-		raw_ssns = &raw_ssns_array[c];
-		if (read_ssns(nbft, raw_ssns, &ss) == 0)
-			list_add_tail(&nbft->subsystem_ns_list, &ss->node);
+	nbft->subsystem_ns_list = calloc(num_ssns + 1, sizeof(struct nbft_info_subsystem_ns));
+	for (i = 0, cnt = 0; i < num_ssns; i++) {
+		if (read_ssns(nbft, &raw_ssns_array[i], &nbft->subsystem_ns_list[cnt]) == 0)
+			cnt++;
 	}
 }
 
@@ -573,7 +571,7 @@ void nbft_free(struct nbft_info *nbft)
 	struct nbft_info_hfi **hfi;
 	struct nbft_info_security **sec;
 	struct nbft_info_discovery **disc;
-	struct nbft_info_subsystem_ns *ns;
+	struct nbft_info_subsystem_ns **ns;
 
 	for (hfi = nbft->hfi_list; hfi && *hfi; hfi++)
 		free(*hfi);
@@ -584,10 +582,11 @@ void nbft_free(struct nbft_info *nbft)
 	for (sec = nbft->security_list; sec && *sec; sec++)
 		free(*sec);
 	free(nbft->security_list);
-	while ((ns = list_pop(&nbft->subsystem_ns_list, struct nbft_info_subsystem_ns, node))) {
-		free(ns->hfis);
-		free(ns);
+	for (ns = nbft->subsystem_ns_list; ns && *ns; ns++) {
+		free((*ns)->hfis);
+		free(*ns);
 	}
+	free(nbft->subsystem_ns_list);
 	free(nbft->raw_nbft);
 	free((void *)nbft->filename);
 	free(nbft);
@@ -654,7 +653,6 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	(*nbft)->filename = strdup(filename);
 	(*nbft)->raw_nbft = raw_nbft;
 	(*nbft)->raw_nbft_size = raw_nbft_size;
-	list_head_init(&(*nbft)->subsystem_ns_list);
 
 	if (parse_raw_nbft(*nbft)) {
 		nvme_msg(NULL, LOG_ERR, "Failed to parse %s\n", filename);

@@ -11,8 +11,6 @@
 
 #include <sys/types.h>
 
-#include <ccan/list/list.h>
-
 #include "util.h"
 
 
@@ -1057,7 +1055,6 @@ enum nbft_info_nid_type {
 
 struct nbft_info_subsystem_ns {
 	int index;
-	struct list_node node;
 	struct nbft_info_discovery *discovery;
 	struct nbft_info_security *security;
 	int num_hfis;
@@ -1096,8 +1093,8 @@ struct nbft_info {
 	struct nbft_info_security **security_list;
 	/* @discovery_list: discovery controllers, null-terminated */
 	struct nbft_info_discovery **discovery_list;
-	/* subsystem/namespace */
-	struct list_head subsystem_ns_list;
+	/* @subsystem_ns_list: subsystem/namespace, null-terminated */
+	struct nbft_info_subsystem_ns **subsystem_ns_list;
 };
 
 /*
