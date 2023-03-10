@@ -122,11 +122,11 @@ static int __get_heap_obj(struct nbft_header *header, const char *filename,
 
 static struct nbft_info_discovery *discovery_from_index(struct nbft_info *nbft, int i)
 {
-	struct nbft_info_discovery *d;
+	struct nbft_info_discovery **d;
 
-	list_for_each(&nbft->discovery_list, d, node)
-		if (d->index == i)
-			return d;
+	for (d = nbft->discovery_list; d && *d; d++)
+		if ((*d)->index == i)
+			return *d;
 	return NULL;
 }
 
@@ -441,14 +441,12 @@ static void read_security_descriptors(struct nbft_info *nbft, int num_sec, struc
 
 static void read_discovery_descriptors(struct nbft_info *nbft, int num_disc, struct nbft_discovery *raw_disc_array, int disc_len)
 {
-	int c;
-	struct nbft_discovery *raw_discovery;
-	struct nbft_info_discovery *discovery;
+	int i, cnt;
 
-	for (c = 0; c < num_disc; c++) {
-		raw_discovery = &raw_disc_array[c];
-		if (read_discovery(nbft, raw_discovery, &discovery) == 0)
-			list_add_tail(&nbft->discovery_list, &discovery->node);
+	nbft->discovery_list = calloc(num_disc + 1, sizeof(struct nbft_info_discovery));
+	for (i = 0, cnt = 0; i < num_disc; i++) {
+		if (read_discovery(nbft, &raw_disc_array[i], &nbft->discovery_list[cnt]) == 0)
+			cnt++;
 	}
 }
 
@@ -572,16 +570,17 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 
 void nbft_free(struct nbft_info *nbft)
 {
-	void *subtable;
 	struct nbft_info_hfi **hfi;
 	struct nbft_info_security **sec;
+	struct nbft_info_discovery **disc;
 	struct nbft_info_subsystem_ns *ns;
 
 	for (hfi = nbft->hfi_list; hfi && *hfi; hfi++)
 		free(*hfi);
 	free(nbft->hfi_list);
-	while ((subtable = list_pop(&nbft->discovery_list, struct nbft_info_discovery, node)))
-		free(subtable);
+	for (disc = nbft->discovery_list; disc && *disc; disc++)
+		free(*disc);
+	free(nbft->discovery_list);
 	for (sec = nbft->security_list; sec && *sec; sec++)
 		free(*sec);
 	free(nbft->security_list);
@@ -655,7 +654,6 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	(*nbft)->filename = strdup(filename);
 	(*nbft)->raw_nbft = raw_nbft;
 	(*nbft)->raw_nbft_size = raw_nbft_size;
-	list_head_init(&(*nbft)->discovery_list);
 	list_head_init(&(*nbft)->subsystem_ns_list);
 
 	if (parse_raw_nbft(*nbft)) {
