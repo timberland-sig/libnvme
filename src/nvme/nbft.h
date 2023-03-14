@@ -1058,7 +1058,7 @@ struct nbft_info_subsystem_ns {
 	struct nbft_info_discovery *discovery;
 	struct nbft_info_security *security;
 	int num_hfis;
-	/* @hfis: non-null terminated */
+	/* @hfis: null terminated */
 	struct nbft_info_hfi **hfis;
 	char transport[8];
 	char traddr[40];
