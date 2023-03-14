@@ -242,7 +242,7 @@ static int read_ssns(struct nbft_info *nbft, struct nbft_ssns *raw_ssns, struct 
 	if (ret)
 		goto fail;
 
-	ssns->hfis = calloc(raw_ssns->secondary_hfi_assoc_obj.length + 1, sizeof(*ssns->hfis));
+	ssns->hfis = calloc(raw_ssns->secondary_hfi_assoc_obj.length + 2, sizeof(*ssns->hfis));
 	if (!ssns->hfis) {
 		ret = -ENOMEM;
 		goto fail;
