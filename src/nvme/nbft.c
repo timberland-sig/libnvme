@@ -566,6 +566,10 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	return 0;
 }
 
+/**
+ * nbft_free() - Free the struct nbft_info and its contents
+ * @nbft: Parsed NBFT table data.
+ */
 void nbft_free(struct nbft_info *nbft)
 {
 	struct nbft_info_hfi **hfi;
@@ -593,11 +597,15 @@ void nbft_free(struct nbft_info *nbft)
 }
 
 /**
- * nbft_read - read ACPI NBFT table and parse contents into struct nbft_info 
- * @nbft: will contain address of struct nbft_info if read successful
- * @filename: location of raw ACPI NBFT table
+ * nbft_read() - Read and parse contents of an ACPI NBFT table
  *
- * Returns 0 on success, errno otherwise.
+ * @nbft:     Parsed NBFT table data.
+ * @filename: Filename of the raw NBFT table to read.
+ *
+ * Read and parse the specified NBFT file into a struct nbft_info.
+ * Free with nbft_free().
+ *
+ * Return: 0 on success, errno otherwise.
  */
 int nbft_read(struct nbft_info **nbft, const char *filename)
 {
