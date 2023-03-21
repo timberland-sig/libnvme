@@ -82,10 +82,8 @@ static int __get_heap_obj(struct nbft_header *header, const char *filename,
 			  struct nbft_heap_obj obj, bool is_string,
 			  char **output)
 {
-	if (obj.length == 0) {
-		*output = NULL;
+	if (obj.length == 0)
 		return -ENOENT;
-	}
 
 	if (!in_heap(header, obj)) {
 		nvme_msg(NULL, LOG_DEBUG,
@@ -183,8 +181,8 @@ static int read_ssns(struct nbft_info *nbft,
 {
 	struct nbft_header *header = (struct nbft_header *)nbft->raw_nbft;
 	struct nbft_info_subsystem_ns *ssns;
-	__u8 *ss_hfi_indexes;
-	__u8 *tmp;
+	__u8 *ss_hfi_indexes = NULL;
+	__u8 *tmp = NULL;
 	int i, ret;
 
 	if (!(raw_ssns->flags & NBFT_SSNS_VALID))
