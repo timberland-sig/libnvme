@@ -631,7 +631,7 @@ void nbft_free(struct nbft_info *nbft)
 	}
 	free(nbft->subsystem_ns_list);
 	free(nbft->raw_nbft);
-	free((void*)nbft->filename);
+	free(nbft->filename);
 	free(nbft);
 }
 
