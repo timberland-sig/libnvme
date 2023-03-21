@@ -1206,7 +1206,7 @@ struct nbft_info_subsystem_ns {
  * @subsystem_ns_list: The SSNS Descriptor List (null-terminated array).
  */
 struct nbft_info {
-	const char *filename;
+	char *filename;
 	__u8 *raw_nbft;
 	ssize_t raw_nbft_size;
 	struct nbft_info_host host;
