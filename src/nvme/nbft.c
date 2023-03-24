@@ -18,7 +18,7 @@
 #include "log.h"
 
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 static __u8 csum(void *buffer, int length)
 {
@@ -64,18 +64,21 @@ static bool in_heap(struct nbft_header *header, struct nbft_heap_obj obj)
 static char *trtype_to_string(__u8 transport_type)
 {
 	switch (transport_type) {
-		case 3:
-			return "tcp";
-		default:
-			return "invalid";
+	case 3:
+		return "tcp";
+	default:
+		return "invalid";
 	}
 }
 
-#define verify(condition, message)							\
-	if (!(condition)) {								\
-		nvme_msg(NULL, LOG_DEBUG, "file %s: " message "\n", nbft->filename);	\
-		return -EINVAL;								\
-	}
+#define verify(condition, message)					\
+	do {								\
+		if (!(condition)) {					\
+			nvme_msg(NULL, LOG_DEBUG, "file %s: " message "\n", \
+				 nbft->filename);			\
+			return -EINVAL;					\
+		}							\
+	} while (0)
 
 static int __get_heap_obj(struct nbft_header *header, const char *filename,
 			  const char *descriptorname, const char *fieldname,
@@ -211,7 +214,8 @@ static int read_ssns(struct nbft_info *nbft,
 
 	/* primary discovery controller */
 	if (raw_ssns->primary_discovery_ctrl_index) {
-		ssns->discovery = discovery_from_index(nbft, raw_ssns->primary_discovery_ctrl_index);
+		ssns->discovery = discovery_from_index(nbft,
+						       raw_ssns->primary_discovery_ctrl_index);
 		if (!ssns->discovery)
 			nvme_msg(NULL, LOG_DEBUG,
 				 "file %s: namespace %d discovery controller not found\n",
@@ -546,7 +550,7 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	       "host descriptor offset/length is invalid");
 	host = (struct nbft_host *)(raw_nbft + control->hdesc.offset);
 
-	verify (host->flags & NBFT_HOST_VALID, "host descriptor valid flag not set");
+	verify(host->flags & NBFT_HOST_VALID, "host descriptor valid flag not set");
 	verify(host->structure_id == NBFT_DESC_HOST, "invalid ID in HOST descriptor");
 	nbft->host.id = (unsigned char *) &(host->host_id);
 	if (get_heap_obj(host, host_nqn_obj, 1, &nbft->host.nqn) != 0)
@@ -573,7 +577,8 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 		verify(control->seco + control->secl * control->num_sec <= header->length,
 		       "invalid security profile desciptor list offset");
 		raw_security_array = (struct nbft_security *)(raw_nbft + control->seco);
-		read_security_descriptors(nbft, control->num_sec, raw_security_array, control->secl);
+		read_security_descriptors(nbft, control->num_sec,
+					  raw_security_array, control->secl);
 	}
 
 	/*
@@ -585,7 +590,8 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 		verify(control->disco + control->discl * control->num_disc <= header->length,
 		       "invalid discovery profile descriptor list offset");
 		raw_discovery_array = (struct nbft_discovery *)(raw_nbft + control->disco);
-		read_discovery_descriptors(nbft, control->num_disc, raw_discovery_array, control->discl);
+		read_discovery_descriptors(nbft, control->num_disc, raw_discovery_array,
+					   control->discl);
 	}
 
 	/*

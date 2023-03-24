@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-2.1-or-later
+/* SPDX-License-Identifier: LGPL-2.1-or-later */
 /*
  * This file is part of libnvme.
  * Copyright (c) 2021-2022, Dell Inc. or its subsidiaries.  All Rights Reserved.
@@ -111,7 +111,7 @@ struct nbft_heap_obj {
  * @minor_revision:	 Minor Revision: The minor revision of the structure
  *			 corresponding to the Signature field. If the major revision
  *			 numbers are the same, any minor revision number differences
- *			 shall be backwards compatable with the same signature.
+ *			 shall be backwards compatible with the same signature.
  * @reserved:		 Reserved.
  */
 struct nbft_header {
@@ -394,7 +394,7 @@ enum nbft_hfi_flags {
  * @route_metric:	Route Metric: If this field is set to a non-zero value,
  *			this field indicates the cost value for the route indicated
  *			by this HF. This field contains the value utilized by the
- *			pre-OS driver when chosing among all availible routes. Lower
+ *			pre-OS driver when chosing among all available routes. Lower
  *			values relate to higher priority. Refer to IETF RFC 4249.
  *			If the pre-OS driver supports routing and did not configure
  *			a specific route metric for this interface, then the pre-OS
@@ -593,7 +593,7 @@ struct nbft_ssns {
  *					 process, but the pre-OS may not have established
  *					 connectivity to or evaluated the contents of this
  *					 Descriptor. Such namespaces may contain supplemental
- *					 data deemed relevent by the Administrator as part
+ *					 data deemed relevant by the Administrator as part
  *					 of the pre-OS to OS hand off. This may include
  *					 properties such as a UEFI device path that may
  *					 not have been created for this namespace. This means
