@@ -129,7 +129,7 @@ struct nbft_header {
 	struct nbft_heap_obj driver_dev_path_sig;
 	__u8 minor_revision;
 	__u8 reserved[13];
-} __attribute__((packed));
+};
 
 /**
  * struct nbft_control - NBFT Table - Control Descriptor (Figure 8)
@@ -239,7 +239,7 @@ struct nbft_control {
 	__u8 discv;
 	__u8 num_disc;
 	__u8 reserved4[16];
-} __attribute__((packed));
+};
 
 /**
  * enum nbft_control_flags - Control Descriptor Flags
@@ -268,7 +268,7 @@ struct nbft_host {
 	__u8 host_id[16];
 	struct nbft_heap_obj host_nqn_obj;
 	__u8 reserved[8];
-} __attribute__((packed));
+};
 
 /**
  * enum nbft_host_flags - Host Flags
@@ -340,7 +340,7 @@ struct nbft_hfi {
 	__u8 reserved1[12];
 	struct nbft_heap_obj trinfo_obj;
 	__u8 reserved2[10];
-} __attribute__((packed));
+};
 
 /**
  * enum nbft_hfi_flags - HFI Descriptor Flags
@@ -811,7 +811,7 @@ struct nbft_security {
 	struct nbft_heap_obj sec_hash_func_obj;
 	struct nbft_heap_obj sec_keypath_obj;
 	__u8 reserved2[22];
-} __attribute__((packed));
+};
 
 /**
  * enum nbft_security_flags - Security Profile Descriptor Flags (Figure 22)
@@ -970,7 +970,7 @@ struct nbft_discovery {
 	struct nbft_heap_obj discovery_ctrl_addr_obj;
 	struct nbft_heap_obj discovery_ctrl_nqn_obj;
 	__u8 reserved2[14];
-} __attribute__((packed));
+};
 
 /**
  * enum nbft_discovery_flags - Discovery Descriptor Flags
