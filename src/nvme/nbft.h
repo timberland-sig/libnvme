@@ -1124,7 +1124,6 @@ struct nbft_info_discovery {
  */
 struct nbft_info_security {
 	int index;
-	/* TODO add fields */
 };
 
 /**
