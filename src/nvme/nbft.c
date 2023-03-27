@@ -12,6 +12,7 @@
 #include <stdlib.h>
 
 #include <arpa/inet.h>
+#include <ccan/endian/endian.h>
 
 #include "private.h"
 #include "nbft.h"
@@ -47,13 +48,15 @@ static void format_ip_addr(char *buf, size_t buflen, __u8 *addr)
 
 static bool in_heap(struct nbft_header *header, struct nbft_heap_obj obj)
 {
-	if (obj.length == 0)
+	if (le16_to_cpu(obj.length) == 0)
 		return true;
-	if (obj.offset < header->heap_offset)
+	if (le32_to_cpu(obj.offset) < le32_to_cpu(header->heap_offset))
 		return false;
-	if (obj.offset > header->heap_offset + header->heap_length)
+	if (le32_to_cpu(obj.offset) >
+	    le32_to_cpu(header->heap_offset) + le32_to_cpu(header->heap_length))
 		return false;
-	if (obj.offset + obj.length > header->heap_offset + header->heap_length)
+	if (le32_to_cpu(obj.offset) + le16_to_cpu(obj.length) >
+	    le32_to_cpu(header->heap_offset) + le32_to_cpu(header->heap_length))
 		return false;
 	return true;
 }
@@ -85,7 +88,7 @@ static int __get_heap_obj(struct nbft_header *header, const char *filename,
 			  struct nbft_heap_obj obj, bool is_string,
 			  char **output)
 {
-	if (obj.length == 0)
+	if (le16_to_cpu(obj.length) == 0)
 		return -ENOENT;
 
 	if (!in_heap(header, obj)) {
@@ -96,15 +99,17 @@ static int __get_heap_obj(struct nbft_header *header, const char *filename,
 	}
 
 	/* check that string is zero terminated correctly */
-	*output = (char *)header + obj.offset;
+	*output = (char *)header + le32_to_cpu(obj.offset);
 
 	if (is_string) {
-		if (strnlen(*output, obj.length + 1) < obj.length)
+		if (strnlen(*output, le16_to_cpu(obj.length) + 1) < le16_to_cpu(obj.length))
 			nvme_msg(NULL, LOG_DEBUG,
 				"file %s: string '%s' in descriptor '%s' is shorter (%zd) than specified length (%d)\n",
 				filename, fieldname, descriptorname,
-				strnlen(*output, obj.length + 1), obj.length);
-		else if (strnlen(*output, obj.length + 1) > obj.length) {
+				strnlen(*output, le16_to_cpu(obj.length) + 1),
+					le16_to_cpu(obj.length));
+		else if (strnlen(*output, le16_to_cpu(obj.length) + 1) >
+			le16_to_cpu(obj.length)) {
 			nvme_msg(NULL, LOG_DEBUG,
 				 "file %s: string '%s' in descriptor '%s' is not zero terminated\n",
 				 filename, fieldname, descriptorname);
@@ -156,24 +161,24 @@ static struct nbft_info_security *security_from_index(struct nbft_info *nbft, in
 
 static int read_ssns_exended_info(struct nbft_info *nbft,
 				  struct nbft_info_subsystem_ns *ssns,
-				  struct nbft_ssns_ext_info *ssns_ei)
+				  struct nbft_ssns_ext_info *raw_ssns_ei)
 {
 	struct nbft_header *header = (struct nbft_header *)nbft->raw_nbft;
 
-	verify(ssns_ei->structure_id == NBFT_DESC_SSNS_EXT_INFO,
+	verify(raw_ssns_ei->structure_id == NBFT_DESC_SSNS_EXT_INFO,
 	       "invalid ID in SSNS extended info descriptor");
-	verify(ssns_ei->version == 1,
+	verify(raw_ssns_ei->version == 1,
 	       "invalid version in SSNS extended info descriptor");
-	verify(ssns_ei->ssns_index == ssns->index,
+	verify(le16_to_cpu(raw_ssns_ei->ssns_index) == le16_to_cpu(ssns->index),
 	       "SSNS index doesn't match extended info descriptor index");
 
-	if (!(ssns_ei->flags & NBFT_SSNS_EXT_INFO_VALID))
+	if (!(le32_to_cpu(raw_ssns_ei->flags) & NBFT_SSNS_EXT_INFO_VALID))
 		return -EINVAL;
 
-	if (ssns_ei->flags & NBFT_SSNS_EXT_INFO_ADMIN_ASQSZ)
-		ssns->asqsz = ssns_ei->asqsz;
-	ssns->controller_id = ssns_ei->cntlid;
-	get_heap_obj(ssns_ei, dhcp_root_path_str_obj, 1, &ssns->dhcp_root_path_string);
+	if (le32_to_cpu(raw_ssns_ei->flags) & NBFT_SSNS_EXT_INFO_ADMIN_ASQSZ)
+		ssns->asqsz = le16_to_cpu(raw_ssns_ei->asqsz);
+	ssns->controller_id = le16_to_cpu(raw_ssns_ei->cntlid);
+	get_heap_obj(raw_ssns_ei, dhcp_root_path_str_obj, 1, &ssns->dhcp_root_path_string);
 
 	return 0;
 }
@@ -188,7 +193,7 @@ static int read_ssns(struct nbft_info *nbft,
 	__u8 *tmp = NULL;
 	int i, ret;
 
-	if (!(raw_ssns->flags & NBFT_SSNS_VALID))
+	if (!(le16_to_cpu(raw_ssns->flags) & NBFT_SSNS_VALID))
 		return -EINVAL;
 	verify(raw_ssns->structure_id == NBFT_DESC_SSNS,
 	       "invalid ID in SSNS descriptor");
@@ -197,7 +202,7 @@ static int read_ssns(struct nbft_info *nbft,
 	if (!ssns)
 		return -ENOMEM;
 
-	ssns->index = raw_ssns->index;
+	ssns->index = le16_to_cpu(raw_ssns->index);
 
 	/* transport type */
 	verify(raw_ssns->trtype == NBFT_TRTYPE_TCP,
@@ -206,9 +211,9 @@ static int read_ssns(struct nbft_info *nbft,
 
 	/* transport specific flags */
 	if (raw_ssns->trtype == NBFT_TRTYPE_TCP) {
-		if (raw_ssns->trflags & NBFT_SSNS_PDU_HEADER_DIGEST)
+		if (le16_to_cpu(raw_ssns->trflags) & NBFT_SSNS_PDU_HEADER_DIGEST)
 			ssns->pdu_header_digest_required = true;
-		if (raw_ssns->trflags & NBFT_SSNS_DATA_DIGEST)
+		if (le16_to_cpu(raw_ssns->trflags) & NBFT_SSNS_DATA_DIGEST)
 			ssns->data_digest_required = true;
 	}
 
@@ -235,10 +240,10 @@ static int read_ssns(struct nbft_info *nbft,
 		goto fail;
 
 	/* subsystem port ID */
-	ssns->subsys_port_id = raw_ssns->subsys_port_id;
+	ssns->subsys_port_id = le16_to_cpu(raw_ssns->subsys_port_id);
 
 	/* NSID, NID type, & NID */
-	ssns->nsid = raw_ssns->nsid;
+	ssns->nsid = le32_to_cpu(raw_ssns->nsid);
 	ssns->nid_type = raw_ssns->nidt;
 	ssns->nid = raw_ssns->nid;
 
@@ -256,7 +261,8 @@ static int read_ssns(struct nbft_info *nbft,
 	if (ret)
 		goto fail;
 
-	ssns->hfis = calloc(raw_ssns->secondary_hfi_assoc_obj.length + 2, sizeof(*ssns->hfis));
+	ssns->hfis = calloc(le16_to_cpu(raw_ssns->secondary_hfi_assoc_obj.length) + 2,
+			    sizeof(*ssns->hfis));
 	if (!ssns->hfis) {
 		ret = -ENOMEM;
 		goto fail;
@@ -270,7 +276,7 @@ static int read_ssns(struct nbft_info *nbft,
 		ret = -EINVAL;
 		goto fail;
 	}
-	for (i = 0; i < raw_ssns->secondary_hfi_assoc_obj.length; i++) {
+	for (i = 0; i < le16_to_cpu(raw_ssns->secondary_hfi_assoc_obj.length); i++) {
 		ssns->hfis[i + 1] = hfi_from_index(nbft, ss_hfi_indexes[i]);
 		if (ss_hfi_indexes[i] && !ssns->hfis[i + 1])
 			nvme_msg(NULL, LOG_DEBUG,
@@ -315,22 +321,22 @@ static int read_hfi_info_tcp(struct nbft_info *nbft,
 	       "invalid ID in HFI transport descriptor");
 	verify(raw_hfi_info_tcp->version == 1,
 	       "invalid version in HFI transport descriptor");
-	if (raw_hfi_info_tcp->hfi_index != hfi->index)
+	if (le16_to_cpu(raw_hfi_info_tcp->hfi_index) != hfi->index)
 		nvme_msg(NULL, LOG_DEBUG,
 			 "file %s: HFI descriptor index %d does not match index in HFI transport descriptor\n",
 			 nbft->filename, hfi->index);
 
-	hfi->tcp_info.pci_sbdf = raw_hfi_info_tcp->pci_sbdf;
+	hfi->tcp_info.pci_sbdf = le32_to_cpu(raw_hfi_info_tcp->pci_sbdf);
 	memcpy(hfi->tcp_info.mac_addr, raw_hfi_info_tcp->mac_addr,
 	       sizeof(raw_hfi_info_tcp->mac_addr));
-	hfi->tcp_info.vlan = raw_hfi_info_tcp->vlan;
+	hfi->tcp_info.vlan = le16_to_cpu(raw_hfi_info_tcp->vlan);
 	hfi->tcp_info.ip_origin = raw_hfi_info_tcp->ip_origin;
 	format_ip_addr(hfi->tcp_info.ipaddr, sizeof(hfi->tcp_info.ipaddr),
 		       raw_hfi_info_tcp->ip_address);
 	hfi->tcp_info.subnet_mask_prefix = raw_hfi_info_tcp->subnet_mask_prefix;
 	format_ip_addr(hfi->tcp_info.gateway_ipaddr, sizeof(hfi->tcp_info.ipaddr),
 		       raw_hfi_info_tcp->ip_gateway);
-	hfi->tcp_info.route_metric = raw_hfi_info_tcp->route_metric;
+	hfi->tcp_info.route_metric = le16_to_cpu(raw_hfi_info_tcp->route_metric);
 	format_ip_addr(hfi->tcp_info.primary_dns_ipaddr,
 		       sizeof(hfi->tcp_info.primary_dns_ipaddr),
 		       raw_hfi_info_tcp->primary_dns);
@@ -526,11 +532,11 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	header = (struct nbft_header *)raw_nbft;
 
 	verify(strncmp(header->signature, NBFT_HEADER_SIG, 4) == 0, "invalid signature");
-	verify(header->length <= raw_nbft_size, "length in header exceeds table length");
+	verify(le32_to_cpu(header->length) <= raw_nbft_size, "length in header exceeds table length");
 	verify(header->major_revision == 1, "unsupported major revision");
 	verify(header->minor_revision == 0, "unsupported minor revision");
-	verify(header->heap_length + header->heap_offset <= header->length,
-	       "heap exceeds table length");
+	verify(le32_to_cpu(header->heap_length) + le32_to_cpu(header->heap_offset) <=
+	       le32_to_cpu(header->length), "heap exceeds table length");
 
 	/*
 	 * control
@@ -545,10 +551,11 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	/*
 	 * host
 	 */
-	verify(control->hdesc.offset + sizeof(struct nbft_host) <= header->length &&
-	       control->hdesc.offset >= sizeof(struct nbft_host),
+	verify(le32_to_cpu(control->hdesc.offset) + sizeof(struct nbft_host) <=
+	       le32_to_cpu(header->length) &&
+	       le32_to_cpu(control->hdesc.offset) >= sizeof(struct nbft_host),
 	       "host descriptor offset/length is invalid");
-	host = (struct nbft_host *)(raw_nbft + control->hdesc.offset);
+	host = (struct nbft_host *)(raw_nbft + le32_to_cpu(control->hdesc.offset));
 
 	verify(host->flags & NBFT_HOST_VALID, "host descriptor valid flag not set");
 	verify(host->structure_id == NBFT_DESC_HOST, "invalid ID in HOST descriptor");
@@ -562,10 +569,12 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	if (control->num_hfi > 0) {
 		struct nbft_hfi *raw_hfi_array;
 
-		verify(control->hfio + sizeof(struct nbft_hfi) * control->num_hfi <= header->length,
+		verify(le32_to_cpu(control->hfio) + sizeof(struct nbft_hfi) *
+		       control->num_hfi <= le32_to_cpu(header->length),
 		       "invalid hfi descriptor list offset");
-		raw_hfi_array = (struct nbft_hfi *)(raw_nbft + control->hfio);
-		read_hfi_descriptors(nbft, control->num_hfi, raw_hfi_array, control->hfil);
+		raw_hfi_array = (struct nbft_hfi *)(raw_nbft + le32_to_cpu(control->hfio));
+		read_hfi_descriptors(nbft, control->num_hfi, raw_hfi_array,
+				     le16_to_cpu(control->hfil));
 	}
 
 	/*
@@ -574,11 +583,14 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	if (control->num_sec > 0) {
 		struct nbft_security *raw_security_array;
 
-		verify(control->seco + control->secl * control->num_sec <= header->length,
+		verify(le32_to_cpu(control->seco) + le16_to_cpu(control->secl) *
+		       control->num_sec <= le32_to_cpu(header->length),
 		       "invalid security profile desciptor list offset");
-		raw_security_array = (struct nbft_security *)(raw_nbft + control->seco);
+		raw_security_array = (struct nbft_security *)(raw_nbft +
+				     le32_to_cpu(control->seco));
 		read_security_descriptors(nbft, control->num_sec,
-					  raw_security_array, control->secl);
+					  raw_security_array,
+					  le16_to_cpu(control->secl));
 	}
 
 	/*
@@ -587,11 +599,13 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	if (control->num_disc > 0) {
 		struct nbft_discovery *raw_discovery_array;
 
-		verify(control->disco + control->discl * control->num_disc <= header->length,
+		verify(le32_to_cpu(control->disco) + le16_to_cpu(control->discl) *
+		       control->num_disc <= le32_to_cpu(header->length),
 		       "invalid discovery profile descriptor list offset");
-		raw_discovery_array = (struct nbft_discovery *)(raw_nbft + control->disco);
+		raw_discovery_array = (struct nbft_discovery *)(raw_nbft +
+				      le32_to_cpu(control->disco));
 		read_discovery_descriptors(nbft, control->num_disc, raw_discovery_array,
-					   control->discl);
+					   le16_to_cpu(control->discl));
 	}
 
 	/*
@@ -600,10 +614,13 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	if (control->num_ssns > 0) {
 		struct nbft_ssns *raw_ssns_array;
 
-		verify(control->ssnso + control->ssnsl * control->num_ssns <= header->length,
+		verify(le32_to_cpu(control->ssnso) + le16_to_cpu(control->ssnsl) *
+		       control->num_ssns <= le32_to_cpu(header->length),
 		       "invalid subsystem namespace descriptor list offset");
-		raw_ssns_array = (struct nbft_ssns *)(raw_nbft + control->ssnso);
-		read_ssns_descriptors(nbft, control->num_ssns, raw_ssns_array, control->ssnsl);
+		raw_ssns_array = (struct nbft_ssns *)(raw_nbft +
+				 le32_to_cpu(control->ssnso));
+		read_ssns_descriptors(nbft, control->num_ssns, raw_ssns_array,
+				      le16_to_cpu(control->ssnsl));
 	}
 
 	return 0;

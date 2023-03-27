@@ -67,8 +67,8 @@ enum nbft_trtype {
  * @length: Length in bytes of the heap object, if any.
  */
 struct nbft_heap_obj {
-	__u32 offset;
-	__u16 length;
+	__le32 offset;
+	__le16 length;
 } __attribute__((packed));
 
 /**
