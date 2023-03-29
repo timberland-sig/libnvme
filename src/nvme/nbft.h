@@ -1099,7 +1099,7 @@ struct nbft_info_hfi {
 };
 
 /**
- * nbft_info_discovery - Discovery Descriptor
+ * struct nbft_info_discovery - Discovery Descriptor
  * @index:    The number of this Discovery Descriptor in the Discovery
  * 	      Descriptor List.
  * @security: The Security Profile Descriptor, see &struct nbft_info_security.
