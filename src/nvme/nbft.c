@@ -195,6 +195,7 @@ static int read_ssns(struct nbft_info *nbft,
 
 	if (!(le16_to_cpu(raw_ssns->flags) & NBFT_SSNS_VALID))
 		return -EINVAL;
+
 	verify(raw_ssns->structure_id == NBFT_DESC_SSNS,
 	       "invalid ID in SSNS descriptor");
 
@@ -267,7 +268,6 @@ static int read_ssns(struct nbft_info *nbft,
 		ret = -ENOMEM;
 		goto fail;
 	}
-
 	ssns->hfis[0] = hfi_from_index(nbft, raw_ssns->primary_hfi_desc_index);
 	if (!ssns->hfis[0]) {
 		nvme_msg(NULL, LOG_DEBUG,
@@ -366,13 +366,13 @@ static int read_hfi(struct nbft_info *nbft,
 
 	if (!(raw_hfi->flags & NBFT_HFI_VALID))
 		return -EINVAL;
+
 	verify(raw_hfi->structure_id == NBFT_DESC_HFI,
 	       "invalid ID in HFI descriptor");
 
 	hfi = calloc(1, sizeof(struct nbft_info_hfi));
-	if (!hfi) {
+	if (!hfi)
 		return -ENOMEM;
-	}
 
 	hfi->index = raw_hfi->index;
 
@@ -418,6 +418,7 @@ static int read_discovery(struct nbft_info *nbft,
 
 	if (!(raw_discovery->flags & NBFT_DISCOVERY_VALID))
 		return -EINVAL;
+
 	verify(raw_discovery->structure_id == NBFT_DESC_DISCOVERY,
 	       "invalid ID in discovery descriptor");
 
@@ -669,7 +670,7 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	__u8 *raw_nbft = NULL;
 	size_t raw_nbft_size;
 	FILE *raw_nbft_fp = NULL;
-	int i, ret = 0;
+	int i;
 
 	/*
 	 * read in raw nbft file
@@ -678,15 +679,17 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	if (raw_nbft_fp == NULL) {
 		nvme_msg(NULL, LOG_ERR, "Failed to open %s: %s\n",
 			 filename, strerror(errno));
-		return -EINVAL;
+		errno = EINVAL;
+		return 1;
 	}
 
 	i = fseek(raw_nbft_fp, 0L, SEEK_END);
 	if (i) {
 		nvme_msg(NULL, LOG_ERR, "Failed to read from %s: %s\n",
 			 filename, strerror(errno));
-		ret = -EINVAL;
-		goto fail;
+		fclose(raw_nbft_fp);
+		errno = EINVAL;
+		return 1;
 	}
 
 	raw_nbft_size = ftell(raw_nbft_fp);
@@ -695,16 +698,19 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	raw_nbft = malloc(raw_nbft_size);
 	if (!raw_nbft) {
 		nvme_msg(NULL, LOG_ERR, "Failed to allocate memory for NBFT table");
-		ret = -ENOMEM;
-		goto fail;
+		fclose(raw_nbft_fp);
+		errno = ENOMEM;
+		return 1;
 	}
 
 	i = fread(raw_nbft, sizeof(*raw_nbft), raw_nbft_size, raw_nbft_fp);
 	if (i != raw_nbft_size) {
 		nvme_msg(NULL, LOG_ERR, "Failed to read from %s: %s\n",
 			 filename, strerror(errno));
-		ret = -EINVAL;
-		goto fail;
+		fclose(raw_nbft_fp);
+		free(raw_nbft);
+		errno = EINVAL;
+		return 1;
 	}
 	fclose(raw_nbft_fp);
 
@@ -715,7 +721,8 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	if (!*nbft) {
 		nvme_msg(NULL, LOG_ERR, "Could not allocate memory for NBFT\n");
 		free(raw_nbft);
-		return -ENOMEM;
+		errno = ENOMEM;
+		return 1;
 	}
 
 	(*nbft)->filename = strdup(filename);
@@ -725,12 +732,9 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 	if (parse_raw_nbft(*nbft)) {
 		nvme_msg(NULL, LOG_ERR, "Failed to parse %s\n", filename);
 		nbft_free(*nbft);
-		return -EINVAL;
+		free(raw_nbft);
+		errno = EINVAL;
+		return 1;
 	}
 	return 0;
-
-fail:
-	fclose(raw_nbft_fp);
-	free(raw_nbft);
-	return ret;
 }
