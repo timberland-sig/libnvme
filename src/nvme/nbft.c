@@ -453,9 +453,6 @@ static int read_security(struct nbft_info *nbft,
 			 struct nbft_security *raw_security,
 			 struct nbft_info_security **s)
 {
-	/*
-	 *  TO DO add security stuff
-	 */
 	return -EINVAL;
 }
 
