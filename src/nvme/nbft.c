@@ -625,10 +625,10 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 }
 
 /**
- * nbft_free() - Free the struct nbft_info and its contents
+ * nvme_nbft_free() - Free the struct nbft_info and its contents
  * @nbft: Parsed NBFT table data.
  */
-void nbft_free(struct nbft_info *nbft)
+void nvme_nbft_free(struct nbft_info *nbft)
 {
 	struct nbft_info_hfi **hfi;
 	struct nbft_info_security **sec;
@@ -655,7 +655,7 @@ void nbft_free(struct nbft_info *nbft)
 }
 
 /**
- * nbft_read() - Read and parse contents of an ACPI NBFT table
+ * nvme_nbft_read() - Read and parse contents of an ACPI NBFT table
  *
  * @nbft:     Parsed NBFT table data.
  * @filename: Filename of the raw NBFT table to read.
@@ -665,7 +665,7 @@ void nbft_free(struct nbft_info *nbft)
  *
  * Return: 0 on success, errno otherwise.
  */
-int nbft_read(struct nbft_info **nbft, const char *filename)
+int nvme_nbft_read(struct nbft_info **nbft, const char *filename)
 {
 	__u8 *raw_nbft = NULL;
 	size_t raw_nbft_size;
@@ -731,8 +731,7 @@ int nbft_read(struct nbft_info **nbft, const char *filename)
 
 	if (parse_raw_nbft(*nbft)) {
 		nvme_msg(NULL, LOG_ERR, "Failed to parse %s\n", filename);
-		nbft_free(*nbft);
-		free(raw_nbft);
+		nvme_nbft_free(*nbft);
 		errno = EINVAL;
 		return 1;
 	}
