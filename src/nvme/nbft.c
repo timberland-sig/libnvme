@@ -21,7 +21,7 @@
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-static __u8 csum(void *buffer, int length)
+static __u8 csum(const __u8 *buffer, ssize_t length)
 {
 	int n;
 	__u8 sum = 0;
