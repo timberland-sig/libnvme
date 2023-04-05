@@ -121,12 +121,12 @@ install_headers('libnvme.h', install_mode: mode)
 install_headers('libnvme-mi.h', install_mode: mode)
 install_headers([
         'nvme/api-types.h',
-        'nvme/nbft.h',
         'nvme/fabrics.h',
         'nvme/filters.h',
         'nvme/ioctl.h',
         'nvme/linux.h',
         'nvme/log.h',
+        'nvme/nbft.h',
         'nvme/tree.h',
         'nvme/types.h',
         'nvme/util.h',
