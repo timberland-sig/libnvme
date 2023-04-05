@@ -31,19 +31,23 @@ static __u8 csum(const __u8 *buffer, ssize_t length)
 	return sum;
 }
 
-static void format_ip_addr(char *buf, size_t buflen, __u8 *addr)
+static const char *format_ip_addr(char *buf, size_t buflen, __u8 *addr)
 {
 	struct in6_addr *addr_ipv6;
+        const char *p;
 
 	addr_ipv6 = (struct in6_addr *)addr;
 	if (addr_ipv6->s6_addr32[0] == 0 &&
 	    addr_ipv6->s6_addr32[1] == 0 &&
 	    ntohl(addr_ipv6->s6_addr32[2]) == 0xffff)
 		/* ipv4 */
-		inet_ntop(AF_INET, &(addr_ipv6->s6_addr32[3]), buf, buflen);
+		p = inet_ntop(AF_INET, &(addr_ipv6->s6_addr32[3]), buf, buflen);
+
 	else
 		/* ipv6 */
-		inet_ntop(AF_INET6, addr_ipv6, buf, buflen);
+		p = inet_ntop(AF_INET6, addr_ipv6, buf, buflen);
+
+        return p;
 }
 
 static bool in_heap(struct nbft_header *header, struct nbft_heap_obj obj)
@@ -191,6 +195,7 @@ static int read_ssns(struct nbft_info *nbft,
 	struct nbft_info_subsystem_ns *ssns;
 	__u8 *ss_hfi_indexes = NULL;
 	__u8 *tmp = NULL;
+        const char *p;
 	int i, ret;
 
 	if (!(le16_to_cpu(raw_ssns->flags) & NBFT_SSNS_VALID))
@@ -233,7 +238,11 @@ static int read_ssns(struct nbft_info *nbft,
 	if (ret)
 		goto fail;
 
-	format_ip_addr(ssns->traddr, sizeof(ssns->traddr), tmp);
+	p = format_ip_addr(ssns->traddr, sizeof(ssns->traddr), tmp);
+        if (p != NULL) {
+            ret = -EINVAL;
+            goto fail;
+        }
 
 	/* subsystem transport service identifier */
 	ret = get_heap_obj(raw_ssns, subsys_trsvcid_obj, 1, &ssns->trsvcid);
@@ -313,6 +322,7 @@ static int read_hfi_info_tcp(struct nbft_info *nbft,
 			     struct nbft_info_hfi *hfi)
 {
 	struct nbft_header *header = (struct nbft_header *)nbft->raw_nbft;
+        const char *p;
 
 	if ((raw_hfi_info_tcp->flags & NBFT_HFI_INFO_TCP_VALID) == 0)
 		return -EINVAL;
@@ -331,23 +341,28 @@ static int read_hfi_info_tcp(struct nbft_info *nbft,
 	       sizeof(raw_hfi_info_tcp->mac_addr));
 	hfi->tcp_info.vlan = le16_to_cpu(raw_hfi_info_tcp->vlan);
 	hfi->tcp_info.ip_origin = raw_hfi_info_tcp->ip_origin;
-	format_ip_addr(hfi->tcp_info.ipaddr, sizeof(hfi->tcp_info.ipaddr),
+	p = format_ip_addr(hfi->tcp_info.ipaddr, sizeof(hfi->tcp_info.ipaddr),
 		       raw_hfi_info_tcp->ip_address);
+        verify(p != NULL, "invalid HFI tcp_info.ipaddr");
 	hfi->tcp_info.subnet_mask_prefix = raw_hfi_info_tcp->subnet_mask_prefix;
-	format_ip_addr(hfi->tcp_info.gateway_ipaddr, sizeof(hfi->tcp_info.ipaddr),
+	p = format_ip_addr(hfi->tcp_info.gateway_ipaddr, sizeof(hfi->tcp_info.ipaddr),
 		       raw_hfi_info_tcp->ip_gateway);
+        verify(p != NULL, "invalid HFI tcp_info.gateway_ipaddr");
 	hfi->tcp_info.route_metric = le16_to_cpu(raw_hfi_info_tcp->route_metric);
-	format_ip_addr(hfi->tcp_info.primary_dns_ipaddr,
+	p = format_ip_addr(hfi->tcp_info.primary_dns_ipaddr,
 		       sizeof(hfi->tcp_info.primary_dns_ipaddr),
 		       raw_hfi_info_tcp->primary_dns);
-	format_ip_addr(hfi->tcp_info.secondary_dns_ipaddr,
+        verify(p != NULL, "invalid HFI tcp_info.gateway_ipaddr");
+	p = format_ip_addr(hfi->tcp_info.secondary_dns_ipaddr,
 		       sizeof(hfi->tcp_info.secondary_dns_ipaddr),
 		       raw_hfi_info_tcp->secondary_dns);
+        verify(p != NULL, "invalid HFI tcp_info.secondary_dns_ipaddr");
 	if (raw_hfi_info_tcp->flags & NBFT_HFI_INFO_TCP_DHCP_OVERRIDE) {
 		hfi->tcp_info.dhcp_override = true;
-		format_ip_addr(hfi->tcp_info.dhcp_server_ipaddr,
+		p = format_ip_addr(hfi->tcp_info.dhcp_server_ipaddr,
 			       sizeof(hfi->tcp_info.dhcp_server_ipaddr),
 			       raw_hfi_info_tcp->dhcp_server);
+                verify(p != NULL, "invalid HFI tcp_info.dhcp_server_ipaddr");
 	}
 	get_heap_obj(raw_hfi_info_tcp, host_name_obj, 1, &hfi->tcp_info.host_name);
 	if (raw_hfi_info_tcp->flags & NBFT_HFI_INFO_TCP_GLOBAL_ROUTE)
