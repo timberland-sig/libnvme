@@ -450,11 +450,136 @@ static int read_discovery(struct nbft_info *nbft,
 	return 0;
 }
 
+static void free_security_desc(struct nbft_info_security *s)
+{
+	if (!s)
+		return;
+	free(s->sec_chan_algs);
+	free(s->auth_protocols);
+	free(s->ciphers);
+	free(s->dh_groups);
+	free(s->secure_hash_funcs);
+	free(s);
+}
+
 static int read_security(struct nbft_info *nbft,
 			 struct nbft_security *raw_security,
 			 struct nbft_info_security **s)
 {
-	return -EINVAL;
+	struct nbft_info_security *security;
+	struct nbft_header *header = (struct nbft_header *)nbft->raw_nbft;
+	__u8 *tmp;
+	int len, ret;
+
+	if (!(le16_to_cpu(raw_security->flags) & NBFT_SECURITY_VALID))
+		return -EINVAL;
+	verify(raw_security->structure_id == NBFT_DESC_SECURITY,
+	       "invalid ID in security descriptor");
+
+	security = calloc(1, sizeof(struct nbft_info_security));
+	if (!security)
+		return -ENOMEM;
+
+	security->index = raw_security->index;
+
+	/* Secure Channel Algorithm */
+	ret = (le16_to_cpu(raw_security->flags) & NBFT_SECURITY_SEC_POLICY_LIST_MASK) ? 0 : -ENOENT;
+	ret = ret || get_heap_obj(raw_security, sec_chan_alg_obj, 0, (char **)&tmp);
+	if (ret != 0 && ret != -ENOENT)
+		goto fail;
+	if (ret == 0) {
+		len = le16_to_cpu(raw_security->sec_chan_alg_obj.length);
+		security->sec_chan_algs = calloc(len + 1,
+						 sizeof(*security->sec_chan_algs));
+		if (!security->sec_chan_algs) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+		memcpy(security->sec_chan_algs, tmp, len);
+	}
+
+	/* Authentication Protocols */
+	ret = (le16_to_cpu(raw_security->flags) & NBFT_SECURITY_AUTH_POLICY_LIST_MASK) ? 0 : -ENOENT;
+	ret = ret || get_heap_obj(raw_security, auth_proto_obj, 0, (char **)&tmp);
+	if (ret != 0 && ret != -ENOENT)
+		goto fail;
+	if (ret == 0) {
+		len = le16_to_cpu(raw_security->auth_proto_obj.length);
+		security->auth_protocols = calloc(len + 1,
+						  sizeof(*security->auth_protocols));
+		if (!security->auth_protocols) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+		/* FIXME: unknown data type of the heap list elements */
+		memcpy(security->auth_protocols, tmp, len);
+	}
+
+	/* Cipher Suite */
+	ret = (le16_to_cpu(raw_security->flags) & NBFT_SECURITY_CIPHER_RESTRICTED) ? 0 : -ENOENT;
+	ret = ret || get_heap_obj(raw_security, cipher_suite_obj, 0, (char **)&tmp);
+	if (ret != 0 && ret != -ENOENT)
+		goto fail;
+	if (ret == 0) {
+		len = le16_to_cpu(raw_security->cipher_suite_obj.length);
+		security->ciphers = calloc(len + 1,
+					   sizeof(*security->ciphers));
+		if (!security->ciphers) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+		memcpy(security->ciphers, tmp, len);
+	}
+
+	/* DH Groups */
+	ret = (le16_to_cpu(raw_security->flags) & NBFT_SECURITY_AUTH_DH_GROUPS_RESTRICTED) ? 0 : -ENOENT;
+	ret = ret || get_heap_obj(raw_security, dh_grp_obj, 0, (char **)&tmp);
+	if (ret != 0 && ret != -ENOENT)
+		goto fail;
+	if (ret == 0) {
+		len = le16_to_cpu(raw_security->dh_grp_obj.length);
+		security->dh_groups = calloc(len + 1,
+					     sizeof(*security->dh_groups));
+		if (!security->dh_groups) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+		memcpy(security->dh_groups, tmp, len);
+	}
+
+	/* Secure Hash Functions */
+	ret = (le16_to_cpu(raw_security->flags) & NBFT_SECURITY_SEC_HASH_FUNC_POLICY_LIST) ? 0 : -ENOENT;
+	ret = ret || get_heap_obj(raw_security, sec_hash_func_obj, 0, (char **)&tmp);
+	if (ret != 0 && ret != -ENOENT)
+		goto fail;
+	if (ret == 0) {
+		len = le16_to_cpu(raw_security->sec_hash_func_obj.length);
+		security->secure_hash_funcs = calloc(len + 1,
+						     sizeof(*security->dh_groups));
+		if (!security->secure_hash_funcs) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+		memcpy(security->secure_hash_funcs, tmp, len);
+	}
+
+	/* Secret Keypath */
+	if (get_heap_obj(raw_security, sec_keypath_obj, 1,
+			 (char **)&security->secret_keypath_uri))
+		goto fail;
+
+	/* Flags */
+	security->keypath_redfish = raw_security->secret_type & NBFT_SECURITY_SECRET_REDFISH_HOST_IFACE_URI;
+	security->inband_auth_supported = le16_to_cpu(raw_security->flags) & NBFT_SECURITY_IN_BAND_AUTH_MASK;
+	security->inband_auth_required = le16_to_cpu(raw_security->flags) & NBFT_SECURITY_IN_BAND_AUTH_REQUIRED;
+	security->sec_neg_supported = le16_to_cpu(raw_security->flags) & NBFT_SECURITY_SEC_CHAN_NEG_MASK;
+	security->sec_neg_required = le16_to_cpu(raw_security->flags) & NBFT_SECURITY_SEC_CHAN_NEG_REQUIRED;
+
+	*s = security;
+	return 0;
+fail:
+	free_security_desc(security);
+	return ret;
 }
 
 static void read_hfi_descriptors(struct nbft_info *nbft, int num_hfi,
@@ -642,7 +767,7 @@ void nvme_nbft_free(struct nbft_info *nbft)
 		free(*disc);
 	free(nbft->discovery_list);
 	for (sec = nbft->security_list; sec && *sec; sec++)
-		free(*sec);
+		free_security_desc(*sec);
 	free(nbft->security_list);
 	for (ns = nbft->subsystem_ns_list; ns && *ns; ns++) {
 		free((*ns)->hfis);
