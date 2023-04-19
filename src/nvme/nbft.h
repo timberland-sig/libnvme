@@ -1119,12 +1119,46 @@ struct nbft_info_discovery {
 
 /**
  * struct nbft_info_security - Security Profile Descriptor
- * @index: The number of this Security Profile Descriptor in the Security
- * 	   Profile Descriptor List.
+ * @index:		   The number of this Security Profile Descriptor in the
+ * 			   Security Profile Descriptor List.
+ * @sec_chan_algs:	   NULL-terminated list of secure channel algorithms or NULL
+ * 			   when not indicated by policy from driver defaults or
+ * 			   administrative configuration. Refer to &enum nvmf_tcp_sectype.
+ * @auth_protocols:	   NULL-terminated list of authentication protocols or NULL
+ * 			   when not indicated by policy from driver defaults or
+ * 			   administrative configuration.
+ * @ciphers:		   NULL-terminated list of supported cipher suite identifiers
+ * 			   by the driver (refer to IANA TLS Parameters Registry)
+ * 			   or NULL when not restricted by the policy.
+ * @dh_groups:		   NULL-terminated list of DH-HMAC-CHAP Diffie-Hellman (DH)
+ * 			   authentication group identifiers or NULL when use
+ * 			   of an authentication DH Group is not required.
+ * @secure_hash_funcs:	   NULL-terminated list of DH-HMAC-CHAP hash function
+ * 			   identifiers or NULL when use of a secure hash function
+ * 			   is not required.
+ * @secret_keypath_uri:	   The Secret Keypath URI.
+ * @keypath_redfish:	   Indicates that @secret_keypath_uri represents
+ * 			   a Redfish Host Interface URI.
+ * @inband_auth_supported: Indicates that in-band authentication is supported
+ * 			   by the NVM subsystem.
+ * @inband_auth_required:  Indicates that in-band authentication is required.
+ * @sec_neg_supported:	   Indicates that secure channel negotiation is supported
+ * 			   by the NVM subsystem.
+ * @sec_neg_required:	   Indicates that secure channel negotiation is required.
  */
 struct nbft_info_security {
 	int index;
-	/* TODO add fields */
+	__u8 *sec_chan_algs;
+	__u8 *auth_protocols;    /* FIXME: add base spec. Figure 439 to types.h */
+	__u8 *ciphers;           /* TODO: use more concrete data type? */
+	__u8 *dh_groups;         /* FIXME: add base spec. Figure 447 to types.h */
+	__u8 *secure_hash_funcs; /* FIXME: add base spec. Figure 446 to types.h */
+	const char *secret_keypath_uri;
+	bool keypath_redfish;
+	bool inband_auth_supported;
+	bool inband_auth_required;
+	bool sec_neg_supported;
+	bool sec_neg_required;
 };
 
 /**
